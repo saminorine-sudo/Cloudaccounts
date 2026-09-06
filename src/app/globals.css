@@ -1,0 +1,227 @@
+@import "tailwindcss";
+
+/*
+ * CloudAccounts design system
+ * ---------------------------
+ * Green is used deliberately: primary actions, links, statistics, icon accents,
+ * active states and the dark footer/CTA bands. Everything else sits on white,
+ * off-white (#F8FAFC) and a very light mint (#F0FDF4) so the site reads as a
+ * premium professional-services firm rather than a neon SaaS product.
+ */
+
+@theme {
+  /* Brand green scale. 700 is the primary, 800 the deep tone, 500 the accent. */
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #86efac;
+  --color-brand-400: #4ade80;
+  --color-brand-500: #22c55e;
+  --color-brand-600: #16a34a;
+  --color-brand-700: #166534;
+  --color-brand-800: #14532d;
+  --color-brand-900: #0e3a20;
+  --color-brand-950: #062012;
+
+  /* Neutrals */
+  --color-ink: #0f172a;
+  --color-ink-soft: #334155;
+  --color-muted: #64748b;
+  --color-line: #e2e8f0;
+  --color-line-soft: #f1f5f9;
+  --color-surface: #f8fafc;
+
+  /* Typography */
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+  --font-display:
+    var(--font-display), var(--font-inter), ui-sans-serif, system-ui,
+    sans-serif;
+
+  /* Type scale — display sizes are clamped for fluid mobile → desktop */
+  --text-display-xl: clamp(2.5rem, 1.6rem + 3.8vw, 4.5rem);
+  --text-display-xl--line-height: 1.04;
+  --text-display-xl--letter-spacing: -0.035em;
+  --text-display-lg: clamp(2.125rem, 1.5rem + 2.6vw, 3.5rem);
+  --text-display-lg--line-height: 1.08;
+  --text-display-lg--letter-spacing: -0.03em;
+  --text-display-md: clamp(1.875rem, 1.4rem + 1.9vw, 2.75rem);
+  --text-display-md--line-height: 1.14;
+  --text-display-md--letter-spacing: -0.025em;
+  --text-display-sm: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+  --text-display-sm--line-height: 1.2;
+  --text-display-sm--letter-spacing: -0.02em;
+
+  /* Soft, low-spread shadows — no heavy drop shadows anywhere */
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 1px 3px rgb(15 23 42 / 0.06);
+  --shadow-lift: 0 4px 12px rgb(15 23 42 / 0.06), 0 2px 4px rgb(15 23 42 / 0.04);
+  --shadow-pop: 0 12px 32px rgb(15 23 42 / 0.1), 0 4px 8px rgb(15 23 42 / 0.05);
+
+  --radius-card: 0.875rem;
+
+  --animate-reveal: reveal 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    color: var(--color-ink);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* A single, consistent, always-visible focus treatment. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-700);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Anchor targets clear the sticky header. */
+  [id] {
+    scroll-margin-top: 6rem;
+  }
+
+  ::selection {
+    background-color: var(--color-brand-100);
+    color: var(--color-brand-900);
+  }
+}
+
+@layer components {
+  /* Scroll-reveal: opt-in, honours prefers-reduced-motion, and degrades to
+     "always visible" if JavaScript never runs. */
+  .reveal {
+    opacity: 0;
+    transform: translateY(14px);
+    transition:
+      opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+      transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: none;
+  }
+
+  /* Long-form editorial content (blog posts, guides, legal pages). */
+  .prose-ca {
+    color: var(--color-ink-soft);
+    font-size: 1.0625rem;
+    line-height: 1.75;
+  }
+
+  .prose-ca > * + * {
+    margin-top: 1.25em;
+  }
+
+  .prose-ca h2 {
+    font-size: 1.5rem;
+    line-height: 1.3;
+    letter-spacing: -0.02em;
+    margin-top: 2.25em;
+    margin-bottom: 0.6em;
+  }
+
+  .prose-ca h3 {
+    font-size: 1.1875rem;
+    line-height: 1.4;
+    letter-spacing: -0.01em;
+    margin-top: 1.9em;
+    margin-bottom: 0.5em;
+  }
+
+  .prose-ca ul,
+  .prose-ca ol {
+    padding-left: 1.3em;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5em;
+  }
+
+  .prose-ca ul {
+    list-style: disc;
+  }
+
+  .prose-ca ol {
+    list-style: decimal;
+  }
+
+  .prose-ca li::marker {
+    color: var(--color-brand-600);
+  }
+
+  .prose-ca strong {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .prose-ca a {
+    color: var(--color-brand-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  .prose-ca a:hover {
+    color: var(--color-brand-800);
+  }
+
+  .prose-ca blockquote {
+    border-left: 3px solid var(--color-brand-500);
+    padding-left: 1.25em;
+    color: var(--color-ink);
+    font-style: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .reveal {
+    opacity: 1;
+    transform: none;
+  }
+}
