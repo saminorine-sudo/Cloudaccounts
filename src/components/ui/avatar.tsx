@@ -14,11 +14,16 @@ import { cn } from "@/lib/utils";
  * the same colour across the site.
  */
 
+/**
+ * Every tint keeps a visible disc against both white cards and the light
+ * mint portrait panel — a near-white fill reads as a missing avatar rather
+ * than a monogram.
+ */
 const tints = [
   "bg-brand-100 text-brand-800",
   "bg-brand-800 text-brand-100",
   "bg-slate-200 text-slate-700",
-  "bg-brand-50 text-brand-700 ring-1 ring-brand-200",
+  "bg-brand-200 text-brand-900",
   "bg-slate-800 text-slate-100",
 ];
 
