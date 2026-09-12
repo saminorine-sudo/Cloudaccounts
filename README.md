@@ -24,7 +24,7 @@ npm run dev
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest (107 tests) |
+| `npm test` | Vitest (129 tests) |
 | `npm run db:seed` | Load `src/content` into Supabase |
 | `npm run db:test` | Run migrations + security assertions on a local Postgres |
 
@@ -187,10 +187,37 @@ Deliberate omissions:
 Before launch: replace the content, set `showDemoNotices` to `false`, and
 confirm nothing invented survives.
 
+## Admin area (`/admin`)
+
+Dashboard, lead pipeline with search, status filters and pagination, a lead
+detail page with status changes, notes, follow-up dates and a combined
+activity timeline, plus appointment and enquiry management.
+
+**It is closed in every deployable configuration.** Sign-in is not built, so a
+Supabase-configured deployment has no session to admit anyone, and an
+unconfigured production server refuses outright. `ADMIN_DEV_PREVIEW=true`
+opens it locally against the in-memory store, and requires a non-production
+build as well — setting it on a deployed site does nothing. Every state is
+covered by tests.
+
+### A layout is not an authorization boundary
+
+A Next.js layout that refuses to render `children` does **not** stop the page
+component from running. The page still renders and its output is still
+serialized into the RSC payload — so a layout-only gate shows a denial screen
+while shipping the data behind it. That was found by grepping a real
+production response, not reasoned about.
+
+Authorization therefore lives in `src/lib/admin/data.ts`, a data access layer
+that authorises before every read; each page refuses for itself as well, so a
+denied response contains a denial rather than a page of records. Every server
+action calls `requireAdminAccess()` too, because actions are reachable by
+direct POST and the form that rendered them proves nothing.
+
 ## Not built yet
 
-Deliberately out of scope, and architected for rather than stubbed: the admin
-dashboard and CMS UI, authentication screens, the client portal, document
+Deliberately out of scope, and architected for rather than stubbed:
+authentication screens, the CMS editing UI, the client portal, document
 management, messaging, deadlines, and accounting-platform integrations. See
 [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
 

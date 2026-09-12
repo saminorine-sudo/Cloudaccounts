@@ -3,22 +3,20 @@ import { Inter, Instrument_Sans } from "next/font/google";
 
 import "./globals.css";
 
-import { AnalyticsListener } from "@/components/analytics/analytics-listener";
-import { CookieConsent } from "@/components/consent/cookie-consent";
-import { MobileCtaBar } from "@/components/layout/mobile-cta-bar";
-import { SiteFooter } from "@/components/layout/site-footer";
-import { SiteHeader } from "@/components/layout/site-header";
-import { JsonLd } from "@/components/ui/prose";
-import { getSiteSettings } from "@/lib/content";
-import { SITE_URL, organisationJsonLd, websiteJsonLd } from "@/lib/seo";
+import { SITE_URL } from "@/lib/seo";
 
 /**
- * Inter for body copy, Instrument Sans for display headings.
+ * Root layout — document shell only.
  *
- * Two families with distinct roles rather than one used everywhere: the
- * headline face has more character at large sizes, and Inter stays highly
- * legible at 16–18px. Both are self-hosted by `next/font`, so there is no
- * render-blocking request to a font CDN and no layout shift.
+ * Header, footer and consent live in `(site)/layout.tsx` so the admin area
+ * can render its own chrome instead. Anything here appears on every page,
+ * including the admin.
+ *
+ * Inter for body copy, Instrument Sans for display headings. Two families
+ * with distinct roles rather than one used everywhere: the headline face has
+ * more character at large sizes, and Inter stays highly legible at 16–18px.
+ * Both are self-hosted by `next/font`, so there is no render-blocking request
+ * to a font CDN and no layout shift.
  */
 const inter = Inter({
   subsets: ["latin"],
@@ -59,39 +57,18 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await getSiteSettings();
-
   return (
     <html
       lang="en-GB"
       className={`${inter.variable} ${instrumentSans.variable}`}
     >
       <body className="flex min-h-screen flex-col bg-surface antialiased">
-        <JsonLd data={organisationJsonLd()} />
-        <JsonLd data={websiteJsonLd()} />
-
-        <SiteHeader
-          phone={settings.contact.phone}
-          phoneHref={settings.contact.phoneHref}
-        />
-
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-
-        <SiteFooter settings={settings} />
-
-        {/* Extra bottom room so the sticky mobile bar never covers the footer. */}
-        <div className="h-16 lg:hidden" aria-hidden="true" />
-
-        <MobileCtaBar phoneHref={settings.contact.phoneHref} />
-        <CookieConsent />
-        <AnalyticsListener />
+        {children}
       </body>
     </html>
   );

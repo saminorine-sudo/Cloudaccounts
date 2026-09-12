@@ -82,6 +82,24 @@ export type ContactRecord = {
   phone: string | null;
   subject: string;
   message: string;
+  isHandled: boolean;
+};
+
+export type LeadNoteRecord = {
+  id: string;
+  leadId: string;
+  authorId: string | null;
+  authorName: string | null;
+  body: string;
+  createdAt: string;
+};
+
+export type LeadStatusChange = {
+  id: string;
+  leadId: string;
+  fromStatus: LeadStatus | null;
+  toStatus: LeadStatus;
+  createdAt: string;
 };
 
 export type AppointmentRecord = {
@@ -104,9 +122,51 @@ export type AppointmentRecord = {
 /** True once a database is connected and submissions are durable. */
 export const isPersistent = canWriteToSupabase();
 
-const leads: LeadRecord[] = [];
-const contactSubmissions: ContactRecord[] = [];
-const appointments: AppointmentRecord[] = [];
+/**
+ * The in-memory store is held on `globalThis`.
+ *
+ * Module-scoped arrays are not shared: the route handler that writes a lead
+ * and the admin page that reads it can be instantiated from different module
+ * instances, so each would get its own empty array and the admin would never
+ * see a submission. Hanging the state off a global gives one store per
+ * process, and it also survives hot reloads instead of silently emptying
+ * mid-session.
+ *
+ * This matters only in the fallback mode. With Supabase connected, Postgres
+ * is the shared state and none of this is used.
+ */
+type MemoryState = {
+  leads: LeadRecord[];
+  contactSubmissions: ContactRecord[];
+  appointments: AppointmentRecord[];
+  leadNotes: LeadNoteRecord[];
+  leadStatusHistory: LeadStatusChange[];
+};
+
+const MEMORY_KEY = Symbol.for("cloudaccounts.memoryStore");
+
+type GlobalWithStore = typeof globalThis & {
+  [MEMORY_KEY]?: MemoryState;
+};
+
+const globalRef = globalThis as GlobalWithStore;
+
+globalRef[MEMORY_KEY] ??= {
+  leads: [],
+  contactSubmissions: [],
+  appointments: [],
+  leadNotes: [],
+  leadStatusHistory: [],
+};
+
+const state = globalRef[MEMORY_KEY];
+const {
+  leads,
+  contactSubmissions,
+  appointments,
+  leadNotes,
+  leadStatusHistory,
+} = state;
 
 const nullable = (value: string | undefined) =>
   value && value.trim() !== "" ? value.trim() : null;
@@ -150,8 +210,23 @@ function toContactRecord(row: ContactSubmissionRow): ContactRecord {
     phone: row.phone,
     subject: row.subject,
     message: row.message,
+    isHandled: row.is_handled,
   };
 }
+
+/**
+ * The in-memory store, exposed for the CRM module so the admin screens work
+ * before a database exists. Deliberately not exported from the public write
+ * path's API surface — nothing outside `lib/server` should touch it.
+ */
+export const memoryStore = {
+  leads,
+  contactSubmissions,
+  appointments,
+  leadNotes,
+  leadStatusHistory,
+  toLeadRecord,
+};
 
 function toAppointmentRecord(
   row: AppointmentRow,
@@ -214,6 +289,15 @@ export async function createLead(input: LeadInput): Promise<LeadRecord> {
       followUpAt: null,
     };
     leads.push(record);
+    // Postgres records the opening status with a trigger; in memory it has to
+    // be written here so the activity timeline matches in both modes.
+    leadStatusHistory.push({
+      id: randomUUID(),
+      leadId: record.id,
+      fromStatus: null,
+      toStatus: record.status,
+      createdAt: now,
+    });
     return record;
   }
 
@@ -251,6 +335,7 @@ export async function createContactSubmission(
       phone: nullable(input.phone),
       subject: input.subject,
       message: input.message,
+      isHandled: false,
     };
     contactSubmissions.push(record);
     return record;

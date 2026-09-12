@@ -273,6 +273,23 @@ export type LeadRow = Timestamps & {
   follow_up_at: string | null;
 };
 
+export type LeadNoteRow = {
+  id: string;
+  lead_id: string;
+  author_id: string | null;
+  body: string;
+  created_at: string;
+};
+
+export type LeadStatusHistoryRow = {
+  id: string;
+  lead_id: string;
+  from_status: LeadStatusRow | null;
+  to_status: LeadStatusRow;
+  changed_by_id: string | null;
+  created_at: string;
+};
+
 export type ContactSubmissionRow = {
   id: string;
   name: string;
@@ -336,6 +353,8 @@ export type Database = {
       guides: Table<GuideRow>;
       consultation_types: Table<ConsultationTypeRow>;
       leads: Table<LeadRow>;
+      lead_notes: Table<LeadNoteRow>;
+      lead_status_history: Table<LeadStatusHistoryRow>;
       contact_submissions: Table<ContactSubmissionRow>;
       appointments: Table<AppointmentRow>;
       profiles: Table<ProfileRow>;
