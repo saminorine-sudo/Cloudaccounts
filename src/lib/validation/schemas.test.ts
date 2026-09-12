@@ -127,6 +127,56 @@ describe("lead schema", () => {
   });
 });
 
+describe("single-line sanitising", () => {
+  /**
+   * Names and subjects are interpolated into email Subject headers. A value
+   * carrying a carriage return is classic header-injection input, so it must
+   * never survive validation intact.
+   */
+  it("strips newlines from a name", () => {
+    const parsed = leadSchema.parse({
+      ...validLead,
+      firstName: "Sarah\r\nBcc: victim@example.com",
+    });
+    expect(parsed.firstName).not.toMatch(/[\r\n]/);
+    expect(parsed.firstName).toBe("Sarah Bcc: victim@example.com");
+  });
+
+  it("strips a newline from a contact subject", () => {
+    const parsed = contactSchema.parse({
+      name: "Tom",
+      email: "tom@example.com",
+      subject: "Question\nBcc: victim@example.com",
+      message: "When do I need to register for VAT?",
+      consent: true,
+    });
+    expect(parsed.subject).not.toMatch(/[\r\n]/);
+  });
+
+  it("strips other control characters", () => {
+    const parsed = leadSchema.parse({
+      ...validLead,
+      lastName: "Mit\u0000chell\u007f",
+    });
+    expect(parsed.lastName).toBe("Mit chell");
+  });
+
+  it("collapses runs of whitespace rather than leaving gaps", () => {
+    const parsed = leadSchema.parse({ ...validLead, firstName: "  Sarah   Jane  " });
+    expect(parsed.firstName).toBe("Sarah Jane");
+  });
+
+  it("still rejects a value that is only control characters", () => {
+    const result = leadSchema.safeParse({ ...validLead, firstName: "\r\n\t" });
+    expect(result.success).toBe(false);
+  });
+
+  it("leaves ordinary values untouched", () => {
+    const parsed = leadSchema.parse({ ...validLead, firstName: "Sarah-Jane" });
+    expect(parsed.firstName).toBe("Sarah-Jane");
+  });
+});
+
 describe("contact schema", () => {
   const valid = {
     name: "Tom Bradley",

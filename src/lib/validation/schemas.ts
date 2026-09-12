@@ -1,5 +1,24 @@
 import { z } from "zod";
 
+import {
+  businessTypes,
+  contactMethods,
+  honeypotField,
+  serviceOptions,
+  turnoverBands,
+} from "./options";
+
+// Re-exported so server code has a single import for schemas and options.
+// Client components must import from "./options" directly — importing this
+// module drags Zod into the browser bundle.
+export {
+  businessTypes,
+  contactMethods,
+  honeypotField,
+  serviceOptions,
+  turnoverBands,
+};
+
 /**
  * Validation schemas.
  *
@@ -12,11 +31,28 @@ import { z } from "zod";
  * an admin table later.
  */
 
+/**
+ * Collapses anything that is not a single line of text.
+ *
+ * Several of these fields end up in an email Subject — "New enquiry — {name}",
+ * "Contact form — {subject}". A value carrying a carriage return is header
+ * injection waiting for a mail transport that concatenates rather than
+ * encodes. The transactional provider in use takes JSON and encodes headers
+ * itself, so this is defence in depth rather than the only guard, but a
+ * newline in a name field is invalid input regardless.
+ */
+const singleLine = (value: string) =>
+  value.replace(/\p{Cc}+/gu, " ").replace(/\s{2,}/g, " ").trim();
+
 const name = z
   .string()
-  .trim()
-  .min(1, "Required")
-  .max(80, "Please keep this under 80 characters");
+  .transform(singleLine)
+  .pipe(
+    z
+      .string()
+      .min(1, "Required")
+      .max(80, "Please keep this under 80 characters"),
+  );
 
 const email = z
   .string()
@@ -55,48 +91,8 @@ const message = z
   .trim()
   .max(4000, "Please keep your message under 4,000 characters");
 
-export const businessTypes = [
-  { value: "sole-trader", label: "Sole trader" },
-  { value: "contractor", label: "Contractor" },
-  { value: "limited-company", label: "Limited company" },
-  { value: "partnership", label: "Partnership" },
-  { value: "other", label: "Other" },
-] as const;
-
-export const turnoverBands = [
-  { value: "under-50k", label: "Under £50k" },
-  { value: "50k-100k", label: "£50k–£100k" },
-  { value: "100k-250k", label: "£100k–£250k" },
-  { value: "250k-500k", label: "£250k–£500k" },
-  { value: "500k-plus", label: "£500k+" },
-  { value: "not-sure", label: "Not sure yet" },
-] as const;
-
-export const serviceOptions = [
-  { value: "accounting", label: "Accounting" },
-  { value: "tax", label: "Tax" },
-  { value: "bookkeeping", label: "Bookkeeping" },
-  { value: "payroll", label: "Payroll" },
-  { value: "vat", label: "VAT" },
-  { value: "business-advisory", label: "Business advisory" },
-  { value: "other", label: "Other" },
-] as const;
-
-export const contactMethods = [
-  { value: "email", label: "Email" },
-  { value: "phone", label: "Phone" },
-  { value: "either", label: "Either" },
-] as const;
-
 const values = <T extends readonly { value: string }[]>(options: T) =>
   options.map((option) => option.value) as [string, ...string[]];
-
-/**
- * Honeypot. Real users never see or fill this field; bots fill everything.
- * A submission with content here is accepted with a success response and
- * silently discarded, so the bot gets no signal to adapt.
- */
-export const honeypotField = "company_website";
 
 const honeypot = z
   .string()
@@ -113,8 +109,8 @@ export const leadSchema = z.object({
   phone: phoneOptional,
   businessName: z
     .string()
-    .trim()
-    .max(120, "Please keep this under 120 characters")
+    .transform(singleLine)
+    .pipe(z.string().max(120, "Please keep this under 120 characters"))
     .optional()
     .or(z.literal("")),
   businessType: z.enum(values(businessTypes), {
@@ -148,9 +144,13 @@ export const contactSchema = z.object({
   phone: phoneOptional,
   subject: z
     .string()
-    .trim()
-    .min(1, "Required")
-    .max(140, "Please keep this under 140 characters"),
+    .transform(singleLine)
+    .pipe(
+      z
+        .string()
+        .min(1, "Required")
+        .max(140, "Please keep this under 140 characters"),
+    ),
   message: message.min(10, "Please give us a little more detail"),
   consent: z.literal(true, {
     message: "Please confirm you are happy for us to contact you",
@@ -183,8 +183,8 @@ export const bookingSchema = z.object({
   phone: phoneOptional,
   businessName: z
     .string()
-    .trim()
-    .max(120)
+    .transform(singleLine)
+    .pipe(z.string().max(120))
     .optional()
     .or(z.literal("")),
   notes: z

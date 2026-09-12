@@ -32,7 +32,12 @@ import {
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-const uuid = z.string().min(1).max(64);
+/**
+ * Record ids are always uuids — `randomUUID()` in the in-memory store, uuid
+ * columns in Postgres. Validating the shape rather than just the length keeps
+ * anything path-like out of the `revalidatePath` calls below.
+ */
+const uuid = z.uuid();
 
 const leadStatusValues = [
   "NEW",

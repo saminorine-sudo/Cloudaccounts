@@ -24,7 +24,7 @@ npm run dev
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest (129 tests) |
+| `npm test` | Vitest (135 tests) |
 | `npm run db:seed` | Load `src/content` into Supabase |
 | `npm run db:test` | Run migrations + security assertions on a local Postgres |
 
@@ -158,6 +158,42 @@ The legal pages are drafted templates carrying a visible notice. They must be
 reviewed against how the business actually processes data, and checked against
 current ICO guidance, before publication. A privacy policy does not by itself
 make a site compliant.
+
+## Security headers
+
+Set in `next.config.ts` and verified against a running production server:
+CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+`Permissions-Policy` and HSTS. `X-Powered-By` is turned off, and `/admin`
+additionally sends `Cache-Control: no-store`.
+
+**On `script-src`, stated plainly:** it allows inline scripts. A strict
+`script-src` needs a per-request nonce, and a nonce needs dynamic rendering —
+it would turn every prerendered marketing page into a per-request render. That
+is a poor trade here, because the application has no HTML injection surface:
+content is stored as typed blocks and rendered through React, and the only
+`dangerouslySetInnerHTML` emits JSON-LD with `<` escaped. The CSP earns its
+place through `frame-ancestors`, `form-action` (an injected form cannot post
+enquiry data elsewhere), `base-uri`, `object-src` and `connect-src` instead.
+`unsafe-eval` is added in development only, where React needs it.
+
+## Performance
+
+Measured over the wire against a production build, not estimated:
+
+| | JS | CSS | Fonts | Total |
+| --- | --- | --- | --- | --- |
+| Homepage | 155 KB | 12 KB | 77 KB | 291 KB |
+| Calculators | 169 KB | 12 KB | 77 KB | 304 KB |
+
+No images ship at all — the hero, icons and avatars are markup and SVG.
+
+Measuring this found Zod being bundled into **every** marketing page,
+including pages with no form, because the client components imported their
+option lists from the same module as the schemas and Next shares a chunk
+across a route segment. The lists moved to a dependency-free
+`lib/validation/options.ts`; the client never validates anyway, since the
+server is the only thing that decides. That removed 104 KB — 40% of the
+homepage's JavaScript.
 
 ## Accessibility
 

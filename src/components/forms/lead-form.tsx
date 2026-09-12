@@ -22,7 +22,7 @@ import {
   contactMethods,
   serviceOptions,
   turnoverBands,
-} from "@/lib/validation/schemas";
+} from "@/lib/validation/options";
 
 type FormState = {
   firstName: string;

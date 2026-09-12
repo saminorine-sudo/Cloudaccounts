@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { honeypotField } from "@/lib/validation/schemas";
+import { honeypotField } from "@/lib/validation/options";
 
 export type SubmitStatus = "idle" | "submitting" | "success" | "error";
 
