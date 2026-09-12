@@ -24,7 +24,11 @@ npm run dev
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest (88 tests) |
+| `npm test` | Vitest (107 tests) |
+| `npm run db:seed` | Load `src/content` into Supabase |
+| `npm run db:test` | Run migrations + security assertions on a local Postgres |
+
+The site runs with no database at all — see [Data](#data).
 
 ## Architecture
 
@@ -49,13 +53,39 @@ src/
 docs/DATA-MODEL.md        Planned database schema and RLS design
 ```
 
-### Two seams for the database
+## Data
 
-No component imports `src/content` directly. Content reads go through
-`src/lib/content/index.ts` and submission writes through
-`src/lib/server/submissions.ts`. Both are already `async` and both are shaped
-like the tables in [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md), so connecting
-Supabase means replacing those function bodies — not touching pages.
+Supabase (Postgres) with Row Level Security. Full setup, including migrations
+and seeding, is in [`docs/SUPABASE-SETUP.md`](docs/SUPABASE-SETUP.md).
+
+**The site runs without it.** With no credentials configured, content is read
+from the typed modules in `src/content` and submissions are held in memory, so
+you can work on the whole site before creating a project. A *production*
+server refuses to start in that state rather than silently dropping enquiries.
+
+Everything funnels through two modules — `src/lib/content/index.ts` for reads
+and `src/lib/server/submissions.ts` for writes. No component imports
+`src/content` directly, which is what made swapping the storage layer a
+two-file change.
+
+Three clients with different trust levels: anonymous for public content
+(cookie-free, so pages stay prerendered), service-role for server-side form
+writes, and a session client for the admin area when it arrives.
+
+Once configured, a failed query throws rather than falling back to local
+content — showing placeholder prices during an outage would be worse than
+showing an error.
+
+### Security rules are tested, not asserted
+
+`npm run db:test` builds a throwaway PostgreSQL database, applies a shim for
+the pieces Supabase provides, runs both migrations and then checks **24
+properties** — among them: anonymous visitors cannot read leads, contact
+submissions, appointments or profiles; drafts and future-dated posts stay
+invisible; a client cannot read another client's profile; a user cannot
+promote themselves (the `role` column is not granted to `authenticated` at
+all, so RLS is not the only thing standing in the way); the same consultation
+slot cannot be booked twice; and the lead status timeline is append-only.
 
 ### Content is data, not markup
 
@@ -159,10 +189,16 @@ confirm nothing invented survives.
 
 ## Not built yet
 
-Deliberately out of scope for this release, and architected for rather than
-stubbed: admin dashboard and CMS UI, authentication, the client portal,
-document management, messaging, deadlines, and accounting-platform
-integrations. See [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
+Deliberately out of scope, and architected for rather than stubbed: the admin
+dashboard and CMS UI, authentication screens, the client portal, document
+management, messaging, deadlines, and accounting-platform integrations. See
+[`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
+
+The database foundation those need — roles, profiles, the audit log, and the
+policies that enforce them — is in place and tested. Portal tables
+(documents, messages, tasks, deadlines, invoices) are designed but not
+created, because shipping SQL nothing exercises means shipping schema nobody
+has verified.
 
 No fake integrations were built. There is no mock Xero, QuickBooks or HMRC
 connection pretending to work.

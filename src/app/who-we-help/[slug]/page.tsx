@@ -32,6 +32,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return buildMetadata(audience.seo);
 }
 
+/**
+ * Content comes from the database, so the page is regenerated periodically
+ * rather than frozen at build time. A CMS edit appears within the hour
+ * without a redeploy; until Supabase is connected this is a no-op.
+ */
+export const revalidate = 3600;
+
 export default async function AudiencePage({ params }: Props) {
   const { slug } = await params;
   const audience = await getAudienceBySlug(slug);

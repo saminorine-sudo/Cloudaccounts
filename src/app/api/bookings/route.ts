@@ -14,7 +14,11 @@ import {
   jsonResponse,
   readJsonBody,
 } from "@/lib/server/security";
-import { createAppointment, isSlotTaken } from "@/lib/server/submissions";
+import {
+  createAppointment,
+  isSlotTaken,
+  SlotUnavailableError,
+} from "@/lib/server/submissions";
 import { bookingSchema, fieldErrors } from "@/lib/validation/schemas";
 
 export const dynamic = "force-dynamic";
@@ -144,6 +148,20 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    // Two people can pass the availability check above at the same moment.
+    // The database's unique index decides which one actually got the slot,
+    // and the loser is told plainly rather than shown a server error.
+    if (error instanceof SlotUnavailableError) {
+      return jsonResponse(
+        {
+          ok: false,
+          error: "That slot has just been taken. Please choose another time.",
+          fields: { time: "Already booked" },
+        },
+        { status: 409 },
+      );
+    }
+
     console.error(
       "[booking:error]",
       error instanceof Error ? error.message : "unknown",

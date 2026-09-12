@@ -44,6 +44,13 @@ export async function generateMetadata({
   });
 }
 
+/**
+ * Content comes from the database, so the page is regenerated periodically
+ * rather than frozen at build time. A CMS edit appears within the hour
+ * without a redeploy; until Supabase is connected this is a no-op.
+ */
+export const revalidate = 3600;
+
 export default async function BlogIndexPage({ searchParams }: Props) {
   const { category } = await searchParams;
   const [posts, categories] = await Promise.all([
