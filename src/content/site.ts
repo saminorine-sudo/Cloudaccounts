@@ -1,3 +1,4 @@
+import { resolveSiteUrl } from "@/lib/site-url";
 import type { SiteSettings } from "@/types/content";
 
 /**
@@ -15,7 +16,9 @@ export const siteSettings: SiteSettings = {
   tagline: "Accounting that helps your business move forward.",
   description:
     "Accounting, tax and business support for UK sole traders, contractors, limited companies and growing businesses.",
-  url: process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.cloudaccounts.example",
+  // Resolved rather than read directly: `??` keeps an empty string, and an
+  // empty string reaches `new URL()` in the root layout and fails the build.
+  url: resolveSiteUrl(),
   locale: "en_GB",
 
   contact: {

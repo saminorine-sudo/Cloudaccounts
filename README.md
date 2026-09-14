@@ -24,7 +24,7 @@ npm run dev
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest (148 tests) |
+| `npm test` | Vitest (159 tests) |
 | `npm run db:seed` | Load `src/content` into Supabase |
 | `npm run db:sql` | Emit that same content as SQL, to paste into the dashboard |
 | `npm run db:test` | Run migrations + security assertions on a local Postgres |
