@@ -2,16 +2,16 @@ import "server-only";
 
 import { isSupabaseConfigured } from "@/lib/supabase/clients";
 import type { UserRole } from "@/lib/supabase/database.types";
+import { sessionClient } from "@/lib/supabase/server";
 
 /**
  * ADMIN ACCESS GATE — fail closed.
  *
- * Sign-in is not built yet, so this deliberately denies access in every
- * deployable configuration. There is no state in which a deployed site serves
- * an unauthenticated admin area.
+ * There is no state in which a deployed site serves an unauthenticated admin
+ * area.
  *
- *   Supabase configured      → requires a signed-in staff session. None can
- *                              exist yet, so access is denied.
+ *   Supabase configured      → requires a signed-in account whose profile
+ *                              carries a staff role and is active.
  *   Not configured, prod     → denied.
  *   Not configured, dev      → denied UNLESS ADMIN_DEV_PREVIEW=true, which
  *                              exists purely so the screens can be built and
@@ -62,24 +62,73 @@ function devPreviewEnabled(): boolean {
   );
 }
 
+const STAFF_ROLES: readonly UserRole[] = [
+  "SUPER_ADMIN",
+  "ADMIN",
+  "ACCOUNTANT",
+  "STAFF",
+];
+
+const isStaffRole = (role: UserRole): role is StaffRole =>
+  STAFF_ROLES.includes(role);
+
 /**
  * Resolves the signed-in staff member.
  *
- * Returns null unconditionally: authentication has not been implemented, so
- * there is no session to read. When Supabase Auth is wired up this reads the
- * cookie-bound server client, loads the caller's profile, and returns it only
- * when `is_staff()` holds. Until then, "no session" is the honest answer and
- * the gate denies on it.
+ * Three outcomes, kept distinct because they mean different things to the
+ * person looking at the screen: no session at all, a session belonging to
+ * someone without staff access, or a staff member.
+ *
+ * The role is read from the database on every request rather than from
+ * anything in the token. A JWT is issued once and stays valid until it
+ * expires, so a role baked into it would keep working after the role was
+ * revoked. The profile read goes through the session client, so RLS decides
+ * what is visible — and an inactive account resolves to no role at all,
+ * because `current_user_role()` filters on `is_active`.
  */
-async function currentStaffUser(): Promise<AdminActor | null> {
-  return null;
+async function currentStaffUser(): Promise<
+  | { status: "anonymous" }
+  | { status: "not-staff" }
+  | { status: "staff"; actor: AdminActor }
+> {
+  const supabase = await sessionClient();
+
+  // getUser(), never getSession(): only this one verifies the token.
+  const { data: auth, error: authError } = await supabase.auth.getUser();
+  if (authError || !auth.user) return { status: "anonymous" };
+
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("id, full_name, email, role, is_active")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  // A missing profile is not a reason to let someone in. The signup trigger
+  // creates one for every user, so its absence means something is wrong.
+  if (profileError || !profile) return { status: "not-staff" };
+  if (!profile.is_active) return { status: "not-staff" };
+  if (!isStaffRole(profile.role)) return { status: "not-staff" };
+
+  return {
+    status: "staff",
+    actor: {
+      id: profile.id,
+      name: profile.full_name?.trim() || profile.email || "Staff member",
+      role: profile.role,
+    },
+  };
 }
 
 export async function getAdminAccess(): Promise<AdminAccess> {
   if (isSupabaseConfigured()) {
-    const actor = await currentStaffUser();
-    if (!actor) return { allowed: false, reason: "not-signed-in" };
-    return { allowed: true, mode: "authenticated", actor };
+    const result = await currentStaffUser();
+    if (result.status === "anonymous") {
+      return { allowed: false, reason: "not-signed-in" };
+    }
+    if (result.status === "not-staff") {
+      return { allowed: false, reason: "insufficient-role" };
+    }
+    return { allowed: true, mode: "authenticated", actor: result.actor };
   }
 
   if (devPreviewEnabled()) {
@@ -126,7 +175,7 @@ export const denialMessages: Record<
   },
   "not-signed-in": {
     title: "Sign-in required",
-    body: "The admin area needs a signed-in staff account. Sign-in has not been built yet, so this area is closed.",
+    body: "The admin area needs a signed-in staff account.",
   },
   "insufficient-role": {
     title: "You don't have access",

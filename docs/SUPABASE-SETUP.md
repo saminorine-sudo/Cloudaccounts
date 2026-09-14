@@ -63,8 +63,16 @@ Restart the dev server. It now reads from Supabase — `contentSource()` in
 
 ## 5. Create your first administrator
 
-Everyone who signs up becomes a `CLIENT`. Promote yourself once, from the SQL
-Editor, after signing up through Supabase Auth:
+There is no public sign-up page — staff accounts are created deliberately, not
+by anyone who finds the URL. Create the first one in the dashboard:
+
+1. **Authentication → Users → Add user**, with an email and password.
+2. Tick **Auto Confirm User**, or the account cannot sign in until the address
+   is confirmed and no mail is configured yet.
+
+The signup trigger creates a profile automatically, with the `CLIENT` role —
+privilege is never granted by account creation. Promote it once, from the SQL
+Editor:
 
 ```sql
 update public.profiles
@@ -72,10 +80,30 @@ set role = 'SUPER_ADMIN'
 where email = 'you@example.com';
 ```
 
-After that, role changes go through `public.set_user_role(user_id, role)`,
-which refuses non-administrators and writes to the audit log. A signed-in user
-has no privilege on the `role` column at all, so nobody can promote
-themselves.
+You can now sign in at `/admin/login`.
+
+After the first one, role changes go through
+`public.set_user_role(user_id, role)`, which refuses non-administrators, will
+not let the last administrator demote themselves, and writes to the audit log.
+A signed-in user has no privilege on the `role` column at all, so nobody can
+promote themselves — that is a column-level `GRANT`, not just a policy.
+
+### If sign-in refuses you
+
+The form gives one message for every failure, deliberately, so it cannot be
+used to discover which addresses have accounts. To tell the cases apart, check
+in the database:
+
+```sql
+select p.email, p.role, p.is_active, u.email_confirmed_at
+from public.profiles p
+join auth.users u on u.id = p.id
+where p.email = 'you@example.com';
+```
+
+A null `email_confirmed_at` means the account was never confirmed; a `CLIENT`
+role or `is_active = false` means the credentials were right and the
+authorisation check refused them.
 
 ## Testing the security rules
 
@@ -146,3 +174,22 @@ Tables for the client portal — documents, messages, tasks, deadlines,
 invoices — are designed in [`DATA-MODEL.md`](DATA-MODEL.md) but deliberately
 not created. Shipping unused SQL means shipping schema nobody has exercised.
 They land with the features that use them.
+
+## Deploying to Vercel
+
+Set all three Supabase variables in **Project Settings → Environment
+Variables**, for every environment you intend to deploy. The build fails
+without them rather than starting a server that holds enquiries in memory and
+loses them on restart.
+
+Two things that are easy to get wrong:
+
+- `NEXT_PUBLIC_SUPABASE_URL` is read at **build** time as well as at runtime,
+  because `next.config.ts` puts that origin into the CSP `connect-src`. If it
+  is missing when the build runs, the deployed CSP will not include it.
+- Do **not** set `ADMIN_DEV_PREVIEW` on a deployment. It is ignored in a
+  production build by design, but setting it signals an intent that does not
+  hold.
+
+After the first deploy, confirm the admin area is closed to strangers: request
+`/admin` signed out and expect a redirect to `/admin/login`, not a page.

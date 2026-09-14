@@ -30,12 +30,22 @@ export function AccessDenied({ reason }: { reason: AdminDenialReason }) {
           {message.body}
         </p>
 
-        <Link
-          href="/"
-          className="mt-7 inline-flex h-11 items-center justify-center rounded-lg bg-brand-700 px-5 text-sm font-medium text-white transition-colors hover:bg-brand-800"
-        >
-          Back to the website
-        </Link>
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          {reason === "not-signed-in" || reason === "insufficient-role" ? (
+            <Link
+              href="/admin/login"
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-brand-700 px-5 text-sm font-medium text-white transition-colors hover:bg-brand-800"
+            >
+              Sign in
+            </Link>
+          ) : null}
+          <Link
+            href="/"
+            className="inline-flex h-11 items-center justify-center rounded-lg px-5 text-sm font-medium text-ink ring-1 ring-line transition-colors hover:bg-slate-50"
+          >
+            Back to the website
+          </Link>
+        </div>
       </div>
     </div>
   );

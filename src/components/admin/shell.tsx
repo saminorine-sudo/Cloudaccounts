@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { AdminNav } from "@/components/admin/nav";
+import { SignOut } from "@/components/admin/sign-out";
 import { Logo } from "@/components/layout/logo";
 import { Icon } from "@/components/ui/icon";
 import type { AdminAccess } from "@/lib/admin/access";
@@ -54,6 +55,11 @@ export function AdminShell({
           <p className="mt-0.5 text-xs text-muted">
             {access.actor.role.replace("_", " ").toLowerCase()}
           </p>
+          {access.mode === "authenticated" ? (
+            <div className="mt-3">
+              <SignOut />
+            </div>
+          ) : null}
         </div>
       </div>
 

@@ -1,13 +1,11 @@
 import type { Metadata } from "next";
 
-import { AccessDenied } from "@/components/admin/access-denied";
-import { AdminShell } from "@/components/admin/shell";
-import { getCachedAdminAccess } from "@/lib/admin/data";
-
 /**
- * The admin area must never be cached or prerendered — every response depends
- * on who is asking. `force-dynamic` also stops a denial page being cached and
- * served to someone who should have been let in.
+ * Shared chrome for everything under `/admin`, including the sign-in page.
+ *
+ * Deliberately does NOT gate. The gate lives in `(dashboard)/layout.tsx` for
+ * display and in `lib/admin/data.ts` for access, because a signed-out visitor
+ * has to be able to reach `/admin/login` to do anything about it.
  */
 export const dynamic = "force-dynamic";
 
@@ -18,20 +16,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false, nocache: true },
 };
 
-/**
- * This gate controls what is DISPLAYED. It is not the security boundary:
- * refusing to render `children` here does not stop the page component from
- * running and being serialized into the RSC payload. Each page refuses for
- * itself, and `lib/admin/data.ts` authorises every read.
- */
-export default async function AdminLayout({
+export default function AdminRootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const access = await getCachedAdminAccess();
-
-  if (!access.allowed) return <AccessDenied reason={access.reason} />;
-
-  return <AdminShell access={access}>{children}</AdminShell>;
+  return children;
 }

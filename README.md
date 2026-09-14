@@ -24,8 +24,9 @@ npm run dev
 | `npm run build` | Production build |
 | `npm run typecheck` | TypeScript, no emit |
 | `npm run lint` | ESLint |
-| `npm test` | Vitest (135 tests) |
+| `npm test` | Vitest (148 tests) |
 | `npm run db:seed` | Load `src/content` into Supabase |
+| `npm run db:sql` | Emit that same content as SQL, to paste into the dashboard |
 | `npm run db:test` | Run migrations + security assertions on a local Postgres |
 
 The site runs with no database at all — see [Data](#data).
@@ -229,12 +230,22 @@ Dashboard, lead pipeline with search, status filters and pagination, a lead
 detail page with status changes, notes, follow-up dates and a combined
 activity timeline, plus appointment and enquiry management.
 
-**It is closed in every deployable configuration.** Sign-in is not built, so a
-Supabase-configured deployment has no session to admit anyone, and an
-unconfigured production server refuses outright. `ADMIN_DEV_PREVIEW=true`
-opens it locally against the in-memory store, and requires a non-production
-build as well — setting it on a deployed site does nothing. Every state is
-covered by tests.
+Staff sign in with email and password at `/admin/login`. An unconfigured
+production server still refuses outright, and `ADMIN_DEV_PREVIEW=true` opens
+the screens locally against the in-memory store — it requires a non-production
+build as well, so setting it on a deployed site does nothing.
+
+**Authenticated is not authorised.** Every signup becomes a `CLIENT`, so a
+client's own valid credentials would otherwise open a session here. The role
+is read from the database on every request — never from the token, because a
+JWT issued before a role was revoked stays valid until it expires — and a
+non-staff sign-in is ended immediately rather than left dormant. Sign-in
+failures all return one message, so the form cannot be used to discover which
+addresses have accounts.
+
+The `next` parameter on the sign-in URL is validated against an allowlist of
+paths beneath `/admin`. Unchecked, it would be an open redirect, and a
+phishing link that starts on the real domain is the convincing kind.
 
 ### A layout is not an authorization boundary
 
@@ -252,9 +263,9 @@ direct POST and the form that rendered them proves nothing.
 
 ## Not built yet
 
-Deliberately out of scope, and architected for rather than stubbed:
-authentication screens, the CMS editing UI, the client portal, document
-management, messaging, deadlines, and accounting-platform integrations. See
+Deliberately out of scope, and architected for rather than stubbed: the CMS
+editing UI, the client portal, document management, messaging, deadlines, and
+accounting-platform integrations. See
 [`docs/DATA-MODEL.md`](docs/DATA-MODEL.md).
 
 The database foundation those need — roles, profiles, the audit log, and the
