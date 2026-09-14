@@ -17,6 +17,13 @@
  * Cross-table references are emitted as `(select id from … where key = …)`
  * subqueries rather than generated uuids, so the file stays idempotent no
  * matter what ids the database assigned on a previous run.
+ *
+ * NO EXPLICIT TRANSACTION. The Supabase SQL editor wraps whatever it is given
+ * in its own transaction, and a `commit;` in the middle of that closes it out
+ * from under the wrapper — which surfaces as `relation "billable" does not
+ * exist`, naming an internal CTE rather than anything in this file. The
+ * editor's own transaction is what makes this atomic there; with psql, pass
+ * `-1` to get the same guarantee.
  */
 
 import { audiences } from "../src/content/audiences";
@@ -145,11 +152,12 @@ const sections: string[] = [
   `--`,
   `-- Run AFTER 0001_schema.sql and 0002_rls.sql. Safe to re-run.`,
   `--`,
+  `-- No begin/commit: the Supabase SQL editor supplies its own transaction,`,
+  `-- and committing inside it breaks the editor's wrapper. With psql, use -1.`,
+  `--`,
   `-- EVERYTHING BELOW IS DEMO CONTENT. Statistics, reviews, case studies,`,
   `-- prices, team profiles and contact details are placeholders. Replace them`,
   `-- and set site_settings.show_demo_notices to false before launch.`,
-  ``,
-  `begin;`,
   ``,
 ];
 
@@ -438,7 +446,5 @@ sections.push(
     })),
   ),
 );
-
-sections.push("commit;");
 
 process.stdout.write(sections.join("\n"));

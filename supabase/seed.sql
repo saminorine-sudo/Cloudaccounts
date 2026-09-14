@@ -5,11 +5,12 @@
 --
 -- Run AFTER 0001_schema.sql and 0002_rls.sql. Safe to re-run.
 --
+-- No begin/commit: the Supabase SQL editor supplies its own transaction,
+-- and committing inside it breaks the editor's wrapper. With psql, use -1.
+--
 -- EVERYTHING BELOW IS DEMO CONTENT. Statistics, reviews, case studies,
 -- prices, team profiles and contact details are placeholders. Replace them
 -- and set site_settings.show_demo_notices to false before launch.
-
-begin;
 
 -- site_settings (1)
 insert into public.site_settings (id, name, legal_name, tagline, description, url, locale, contact, socials, seo, show_demo_notices) values
@@ -306,5 +307,3 @@ on conflict (key) do update set
   display_order = excluded.display_order,
   is_active = excluded.is_active,
   is_demo = excluded.is_demo;
-
-commit;
