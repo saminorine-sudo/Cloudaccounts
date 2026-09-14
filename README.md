@@ -146,6 +146,24 @@ Booking slots are re-authorised server-side against the consultation type's
 configured availability. The client chooses a slot; the server decides whether
 it exists.
 
+## Optional integrations
+
+None of these is required, and `.env.example` deliberately lists only the
+three Supabase variables so a deployment needs nothing else. Each of the
+following degrades cleanly when absent rather than erroring.
+
+| Variable | Without it |
+| --- | --- |
+| `NEXT_PUBLIC_SITE_URL` | Canonical URLs, Open Graph tags, `robots.txt` and the sitemap fall back to the hosting platform's own domain (Vercel supplies one), then to a placeholder. **Set it once a custom domain is attached**, or canonical tags will point at the `.vercel.app` address. |
+| `RESEND_API_KEY`, `EMAIL_FROM`, `ADMIN_NOTIFICATION_EMAIL` | Enquiry notifications and acknowledgements are logged to the server console instead of being sent. Submissions are still stored. |
+| `N8N_WEBHOOK_URL`, `N8N_WEBHOOK_SECRET` | The `lead.created`, `contact.created` and `appointment.created` events are skipped. |
+| `NEXT_PUBLIC_GA_MEASUREMENT_ID`, `NEXT_PUBLIC_GTM_ID` | Analytics stays dormant. Nothing loads before consent in any case. |
+| `ALLOW_UNCONFIGURED_PRODUCTION` | A production server refuses to start without Supabase, rather than holding enquiries in memory and losing them on restart. Set it only to deploy a content-only preview on purpose. |
+| `ADMIN_DEV_PREVIEW` | The admin screens stay closed locally. It requires a non-production build as well, so setting it on a deployed site does nothing. |
+
+Notifications fire through `Promise.allSettled`, so a mail or webhook failure
+can never lose a submission that was already stored.
+
 ## Privacy and consent
 
 Nothing optional loads until the visitor chooses. Accept and reject carry
