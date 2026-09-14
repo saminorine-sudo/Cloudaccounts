@@ -13,7 +13,8 @@
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
     "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
     "db:seed": "tsx --env-file-if-exists=.env.local scripts/seed-database.ts",
-    "db:test": "bash supabase/tests/run.sh"
+    "db:test": "bash supabase/tests/run.sh",
+    "db:sql": "tsx scripts/seed-to-sql.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
